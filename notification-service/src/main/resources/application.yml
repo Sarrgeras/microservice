@@ -1,0 +1,51 @@
+#spring:
+#  kafka:
+#    bootstrap-servers: kafka:9092
+#    consumer:
+#      group-id: notification-group
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: com.example.notificationservice.dto.event
+#        spring.json.value.default.type: com.example.notificationservice.dto.event.UserEvent
+#        retry.backoff.ms: 1000
+#        reconnect.backoff.max.ms: 10000
+#        reconnect.backoff.ms: 1000
+#          # Don't fail immediately if Kafka is unavailable
+#        metadata.max.age.ms: 300000
+#  mail:
+#    host: smtp.gmail.com
+#    port: 587
+#    username: ${EMAIL_USERNAME}
+#    password: ${EMAIL_PASSWORD}
+#    properties:
+#      mail:
+#        smtp:
+#          auth: true
+#          starttls:
+#            enable: true
+#
+#kafka:
+#  topic: user-events
+#
+#server:
+#  port: 8081
+
+server:
+  port: 8081
+
+spring:
+  mail:
+    host: smtp.mail.ru
+    port: 465
+    username: ${SPRING_MAIL_USERNAME:mlvlad0304@mail.ru}
+    password: ${SPRING_MAIL_PASSWORD:WLPi1sA6xuhiuE13IfsB}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+    from:
+      address: ${SPRING_MAIL_USERNAME:mlvlad0304@mail.ru}
