@@ -31,7 +31,7 @@ public class UserEventConsumer {
                     emailService.sendGoodbyeEmail(event.getEmail(), event.getUsername());
                     break;
                 default:
-                    log.warn("⚠️ Unknown event type: {}", event.getEventType());
+                    log.warn("Unknown event type: {}", event.getEventType());
             }
 
         } catch (IllegalArgumentException e) {
