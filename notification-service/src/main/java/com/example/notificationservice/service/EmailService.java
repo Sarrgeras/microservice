@@ -1,5 +1,7 @@
 package com.example.notificationservice.service;
 
+import com.example.notificationservice.exception.EmailSendingException;
+import com.example.notificationservice.model.UserEventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,43 +19,37 @@ public class EmailService {
     @Value("${spring.mail.from.address}")
     private String fromAddress;
 
-    public void sendWelcomeEmail(String toEmail, String username) {
-        String subject = "Добро пожаловать!";
-        String text = String.format("""
-            Здравствуйте, %s!
-            
-            Ваш аккаунт на сайте example.com был успешно создан.
-            
-            С уважением,
-            Команда Example.com
-            """, username);
-
-        sendEmail(toEmail, subject, text);
+    public void sendWelcomeEmail(String email, String username) {
+        sendEmail(email, username, UserEventType.CREATE);
     }
 
-    public void sendGoodbyeEmail(String toEmail, String username) {
-        String subject = "Ваш аккаунт удален";
-        String text = String.format("""
-            Здравствуйте, %s!
-            
-            Ваш аккаунт был удалён.
-            
-            С уважением,
-            Команда Example.com
-            """, username);
+    public void sendGoodbyeEmail(String email, String username) {
+        sendEmail(email, username, UserEventType.DELETE);
+    }
 
-        sendEmail(toEmail, subject, text);
+    private void sendEmail(String email, String username, UserEventType eventType) {
+        try {
+            String subject = eventType.getEmailSubject();
+            String text = eventType.getEmailText()
+                    .replace("{username}", username);
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromAddress);
+            message.setTo(email);
+            message.setSubject(subject);
+            message.setText(text);
+
+            mailSender.send(message);
+            log.info("Email sent to: {} for event: {}", email, eventType.getEventType());
+
+        } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", email, e.getMessage());
+            throw new EmailSendingException("Failed to send email to " + email, e);
+        }
     }
 
     public void sendCustomEmail(String toEmail, String subject, String text) {
-        sendEmail(toEmail, subject, text);
-    }
-
-    private void sendEmail(String toEmail, String subject, String text) {
         try {
-            log.info("Attempting to send email from: {}", fromAddress);
-            log.info("Using mail sender: {}", mailSender);
-
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromAddress);
             message.setTo(toEmail);
@@ -61,10 +57,11 @@ public class EmailService {
             message.setText(text);
 
             mailSender.send(message);
-            log.info("Email sent successfully to: {}", toEmail);
+            log.info("Custom email sent to: {} with subject: {}", toEmail, subject);
+
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", toEmail, e.getMessage(), e);
-            throw new RuntimeException("Failed to send email", e);
+            log.error("Failed to send custom email to {}: {}", toEmail, e.getMessage());
+            throw new EmailSendingException("Failed to send custom email to " + toEmail, e);
         }
     }
 }
