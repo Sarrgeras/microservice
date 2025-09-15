@@ -1,6 +1,45 @@
-version: '3.8'
-
 services:
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: native,swagger,no-security
+    networks:
+      - microservices-net
+
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_APPLICATION_NAME: config-server
+      SPRING_PROFILES_ACTIVE: native,eureka
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: https://github.com/Sarrgeras/config-repo.git
+      SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL: main
+      SPRING_CLOUD_CONFIG_SERVER_GIT_CLONE_ON_START: "true"
+    depends_on:
+      - eureka-server
+    networks:
+      - microservices-net
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_APPLICATION_NAME: api-gateway
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - config-server
+      - eureka-server
+    networks:
+      - microservices-net
+
   postgres:
     image: postgres:15
     container_name: postgres
@@ -13,7 +52,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - kafka-net
+      - microservices-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -24,7 +63,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ALLOW_ANONYMOUS_LOGIN: "yes"
     networks:
-      - kafka-net
+      - microservices-net
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -41,47 +80,41 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - kafka-net
+      - microservices-net
 
   user-service:
     build: ./user-service
     container_name: user-service
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_service
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 03042002
+      SPRING_APPLICATION_NAME: user-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     depends_on:
       - postgres
       - kafka
-    restart: unless-stopped
+      - config-server
+      - eureka-server
     networks:
-      - kafka-net
+      - microservices-net
 
   notification-service:
     build: ./notification-service
     container_name: notification-service
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_MAIL_USERNAME: mlvlad0304@mail.ru
-      SPRING_MAIL_PASSWORD: WLPi1sA6xuhiuE13IfsB
-      SPRING_MAIL_HOST: smtp.mail.ru
-      SPRING_MAIL_PORT: 465
-      SPRING_MAIL_FROM_ADDRESS: mlvlad0304@mail.ru
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: true
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
-    restart: unless-stopped
+      SPRING_APPLICATION_NAME: notification-service
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      - config-server
+      - eureka-server
     networks:
-      - kafka-net
+      - microservices-net
 
 volumes:
   postgres_data:
 
 networks:
-  kafka-net:
+  microservices-net:
     driver: bridge
